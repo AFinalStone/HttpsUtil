@@ -1,5 +1,7 @@
 #### HTTP HTTPS WebService 
 
+>原文地址：http://www.cnblogs.com/ok-lanyan/archive/2012/07/14/2591204.html
+
 　　HTTP是一个属于应用层的面向对象的协议，由于其简捷、快速的方式，适用于分布式超媒体信息系统。它于1990年提出，经过几年的使用与发展，得到不断地完善和扩展。目前在WWW中使用的是HTTP/1.0的第六版，HTTP/1.1的规范化工作正在进行之中，而且HTTP-NG(Next Generation of HTTP)的建议已经提出。
 HTTP协议的主要特点可概括如下：
 
@@ -273,4 +275,272 @@ HTTP1.1的客户端和缓存必须将其他非法的日期格式（包括0）看
 eg：为了让浏览器不要缓存页面，我们也可以利用Expires实体报头域，设置为0，jsp中程序如下：
 ```jsp
 response.setDateHeader("Expires","0");
+```
+
+工具类:HttpUtil.java
+
+```java
+
+public class HttpUtil {
+    
+    public static String httpGet(String httpUrl) {
+        String result = "";
+        DefaultHttpClient httpclient = new DefaultHttpClient();// 创建http客户端
+        HttpGet httpget = new HttpGet(httpUrl);
+        HttpResponse response = null;
+        HttpParams params = httpclient.getParams(); // 计算网络超时用
+        HttpConnectionParams.setConnectionTimeout(params, 15 * 1000);
+        HttpConnectionParams.setSoTimeout(params, 20 * 1000);
+        
+        try {
+            response = httpclient.execute(httpget);
+            HttpEntity entity = response.getEntity();// 得到http的内容
+            response.getStatusLine().getStatusCode();// 得到http的状态返回值
+            result = EntityUtils.toString(response.getEntity());// 得到具体的返回值，一般是xml文件
+            entity.consumeContent();// 如果entity不为空，则释放内存空间
+            httpclient.getCookieStore();// 得到cookis
+            httpclient.getConnectionManager().shutdown();// 关闭http客户端
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public static String httpPost(String httpUrl, String data) {
+        String result = "";
+        DefaultHttpClient httpclient = new DefaultHttpClient();
+        HttpPost httpPost = new HttpPost(httpUrl);
+        // httpclient.setCookieStore(DataDefine.mCookieStore);
+        
+        HttpParams params = httpclient.getParams(); // 计算网络超时用
+        HttpConnectionParams.setConnectionTimeout(params, 15 * 1000);
+        HttpConnectionParams.setSoTimeout(params, 20 * 1000);
+        httpPost.setHeader("Content-Type", "text/xml");
+        StringEntity httpPostEntity;
+        
+        try {
+            httpPostEntity = new StringEntity(data, "UTF-8");
+            httpPost.setEntity(httpPostEntity);
+            HttpResponse response = httpclient.execute(httpPost);
+            HttpEntity entity = response.getEntity();// 得到http的内容
+            response.getStatusLine().getStatusCode();// 得到http的状态返回值
+            result = EntityUtils.toString(response.getEntity());// 得到具体的返回值，一般是xml文件
+            entity.consumeContent();// 如果entity不为空，则释放内存空间
+            httpclient.getCookieStore();// 得到cookis
+            httpclient.getConnectionManager().shutdown();// 关闭http客户端
+        } catch (Exception e) {
+            e.printStackTrace();
+        }// base64是经过编码的字符串，可以理解为字符串
+            // StringEntity httpPostEntity = new StringEntity("UTF-8");
+        return result;
+    }
+}
+
+```
+### 二、HTTPS
+
+　　HTTPS（Hypertext Transfer Protocol over Secure Socket Layer，基于SSL的HTTP协议）使用了HTTP协议，但HTTPS使用不同于HTTP协议的默认端口及一个加密、身份验证层（HTTP与TCP之间）。这个协议的最初研发由网景公司进行，提供了身份验证与加密通信方法，现在它被广泛用于互联网上安全敏感的通信。
+
+　　客户端在使用HTTPS方式与Web服务器通信时有以下几个步骤，如图所示。
+
+（1）客户使用https的URL访问Web服务器，要求与Web服务器建立SSL连接。
+
+（2）Web服务器收到客户端请求后，会将网站的证书信息（证书中包含公钥）传送一份给客户端。
+
+（3）客户端的浏览器与Web服务器开始协商SSL连接的安全等级，也就是信息加密的等级。
+
+（4）客户端的浏览器根据双方同意的安全等级，建立会话密钥，然后利用网站的公钥将会话密钥加密，并传送给网站。
+
+（5）Web服务器利用自己的私钥解密出会话密钥。
+
+（6）Web服务器利用会话密钥加密与客户端之间的通信。
+
+![流程](picture/liucheng.png)
+
+```java
+
+public class HttpsUtil {
+    static TrustManager[] xtmArray = new MytmArray[] { new MytmArray() };// 创建信任规则列表
+    private final static int CONNENT_TIMEOUT = 15000;
+    private final static int READ_TIMEOUT = 15000;
+    static HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
+        }
+    };
+
+    /**
+     * 信任所有主机-对于任何证书都不做检查 Create a trust manager that does not validate
+     * certificate chains， Android 采用X509的证书信息机制，Install the all-trusting trust
+     * manager
+     */
+    private static void trustAllHosts() {
+        try {
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, xtmArray, new java.security.SecureRandom());
+            HttpsURLConnection
+                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
+            // 不进行主机名确认,对所有主机
+            HttpsURLConnection.setDefaultHostnameVerifier(DO_NOT_VERIFY);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // /**
+    // * https get方法，返回值是https请求，服务端返回的数据string类型，数据进行xml解析
+    // * */
+    // public static String HttpsGet(String httpsurl) {
+    // return HttpsPost(httpsurl, null);
+    //
+    // }
+    /**
+     * https post方法，返回值是https请求，服务端返回的数据string类型，数据进行xml解析
+     * */
+    public static String HttpsPost(String httpsurl, String data) {
+        String result = null;
+        HttpURLConnection http = null;
+        URL url;
+        try {
+            url = new URL(httpsurl);
+            // 判断是http请求还是https请求
+            if (url.getProtocol().toLowerCase().equals("https")) {
+                trustAllHosts();
+                http = (HttpsURLConnection) url.openConnection();
+                ((HttpsURLConnection) http).setHostnameVerifier(DO_NOT_VERIFY);// 不进行主机名确认
+            } else {
+                http = (HttpURLConnection) url.openConnection();
+            }
+
+            http.setConnectTimeout(CONNENT_TIMEOUT);// 设置超时时间
+            http.setReadTimeout(READ_TIMEOUT);
+            if (data == null) {
+                http.setRequestMethod("GET");// 设置请求类型
+                http.setDoInput(true);
+                // http.setRequestProperty("Content-Type", "text/xml");
+                if (AppSession.mCookieStore != null)
+                    http.setRequestProperty("Cookie", AppSession.mCookieStore);
+            } else {
+                http.setRequestMethod("POST");// 设置请求类型为post
+                http.setDoInput(true);
+                http.setDoOutput(true);
+                // http.setRequestProperty("Content-Type", "text/xml");
+                if (AppSession.mCookieStore != null
+                        && AppSession.mCookieStore.trim().length() > 0)
+                    http.setRequestProperty("Cookie", AppSession.mCookieStore);
+
+                DataOutputStream out = new DataOutputStream(
+                        http.getOutputStream());
+                out.writeBytes(data);
+                out.flush();
+                out.close();
+            }
+
+            // 设置http返回状态200（ok）还是403
+            AppSession.httpsResponseCode = http.getResponseCode();
+            BufferedReader in = null;
+            if (AppSession.httpsResponseCode == 200) {
+                getCookie(http);
+                in = new BufferedReader(new InputStreamReader(
+                        http.getInputStream()));
+            } else
+                in = new BufferedReader(new InputStreamReader(
+                        http.getErrorStream()));
+            String temp = in.readLine();
+            while (temp != null) {
+                if (result != null)
+                    result += temp;
+                else
+                    result = temp;
+                temp = in.readLine();
+            }
+            in.close();
+            http.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    /**
+     * 得到cookie
+     * 
+     */
+    private static void getCookie(HttpURLConnection http) {
+        String cookieVal = null;
+        String key = null;
+        AppSession.mCookieStore = "";
+        for (int i = 1; (key = http.getHeaderFieldKey(i)) != null; i++) {
+            if (key.equalsIgnoreCase("set-cookie")) {
+                cookieVal = http.getHeaderField(i);
+                cookieVal = cookieVal.substring(0, cookieVal.indexOf(";"));
+                AppSession.mCookieStore = AppSession.mCookieStore + cookieVal
+                        + ";";
+            }
+        }
+    }
+}
+
+```
+
+### 三、WebService
+
+　　在《Web Service开发详解》资料中详细介绍了WebService，故本文只贴出Android的代码。
+
+```java
+/**
+ * WebService调用返回值
+*/
+public static String invoke(String nameSpace, String methodName,
+        String httpUrl, Map<String, Object> map) {
+    try {
+        // 实例化SoapObject，invokerWS为服务端调用WebService的方法名
+        SoapObject request = new SoapObject(nameSpace, methodName);
+        
+        // 设置调用方法的参数，参数是服务端所要求的
+        if (map != null) {
+            Set<String> keySet = map.keySet();// 返回键的集合
+            Iterator<String> it = keySet.iterator();
+            while (it.hasNext()) {// 第一种迭代方式取键值
+                Object key = it.next();
+                request.addProperty(key.toString(), map.get(key).toString());
+                Log.i(key.toString(), map.get(key).toString());
+            }
+        }
+
+        Element username = new Element().createElement(nameSpace, "UserName");
+        username.addChild(Node.TEXT, "mobile");
+
+        Element pass = new Element().createElement(nameSpace, "Password");
+        pass.addChild(Node.TEXT, "111111");
+
+        Element[] header = new Element[1];
+        header[0] = new Element().createElement(nameSpace, "CredentialSoapHeader");
+        header[0].addChild(Node.ELEMENT, username);
+        header[0].addChild(Node.ELEMENT, pass);
+
+        // 设置SOAP请求信息，获得序列化的Envelope
+        SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(
+                SoapEnvelope.VER11);
+        envelope.headerOut = header;
+        envelope.bodyOut = request;
+        envelope.dotNet = true;
+        envelope.setOutputSoapObject(request);
+
+        // 构建传输对象，指明URL
+        HttpTransportSE httpTransport = new HttpTransportSE(httpUrl, 10000);
+        httpTransport.debug = true;
+
+        // 调用WebService，methodName是调用服务端的方法名
+        httpTransport.call(nameSpace + methodName, envelope);
+
+        // 获得服务端的返回结果
+        return envelope.getResponse().toString();
+    } catch (Exception e) {
+        Log.e("WebServieInvoker.invoke", e.getMessage());
+    }
+    return null;
+}
 ```

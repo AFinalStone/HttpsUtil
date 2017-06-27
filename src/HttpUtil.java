@@ -43,10 +43,26 @@ public class HttpUtil {
             URL url = new URL(httpUrl.trim());
             //打开连接
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setRequestProperty("Accept-Language","China");
-            urlConnection.setConnectTimeout(10000);//设置请求超时时间,毫秒级
+
+            //设置请求头的一些参数内容
+            urlConnection.setRequestProperty("Accept-Language","zh-CN");
+            urlConnection.setRequestProperty("Accept-Encoding","gzip, deflate");
+            urlConnection.setRequestProperty("Connection","keep-alive");
+            urlConnection.setRequestProperty("Cookie","LOGINUSER_LASTLOGINIP=val=J9cpjv2h5UzqRxqSFhPxZ7G%2bE8aC0EHL4ZgDPKZdiIQ%3d; LOGINUSER_ENDTIME=val=e0%2fD%2bxbwkULTdUfiANArZA%3d%3d");
+
+            //设置请求超时时间,毫秒级
+            urlConnection.setConnectTimeout(10000);
+
+            //如果连接中的 UseCaches 标志为 true，则允许连接使用任何可用的缓存。如果为 false，则忽略缓存。默认值来自 DefaultUseCaches，它默认为 true
             urlConnection.setUseCaches(true);
+
+            //设置请求方式
             urlConnection.setRequestMethod("GET");
+
+            //URL 连接可用于输入或输出。如果打算使用 URL 连接进行输出，则将 DoOutput 标志设置为 true；如果不打算使用，则设置为 false。默认值为 false。
+            urlConnection.setDoOutput(true);
+            urlConnection.setDoInput(true);
+
             if(200 == urlConnection.getResponseCode()){
                 //得到输入流
                 InputStream is =urlConnection.getInputStream();
